@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nhật Ký Gia Đình 🌸</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+<!-- ======================================================
+  HƯỚNG DẪN CẤU HÌNH FIREBASE (BẮT BUỘC):
+  1. Vào https://console.firebase.google.com
+  2. Tạo project mới (tên tuỳ ý)
+  3. Vào Project Settings (biểu tượng bánh răng) > General
+  4. Cuộn xuống "Your apps" > nhấn </> (Web)
+  5. Đặt tên app > Register app
+  6. Copy các giá trị apiKey, authDomain... vào bên dưới
+  7. Vào Firestore Database > Create database > Start in test mode
+====================================================== -->
+<script>
+  // ⚠️  THAY THẾ CÁC GIÁ TRỊ NÀY BẰNG CONFIG CỦA BẠN:
+  const FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyCQigcQUk18q2G9mnWGmyAggx3cUNVUWgQ",
+    authDomain:        "natequeen-memories.firebaseapp.com",
+    projectId:         "natequeen-memories",
+    storageBucket:     "natequeen-memories.firebasestorage.app",
+    messagingSenderId: "604982228984",
+    appId:             "1:604982228984:web:563d564a393b7f350c080d"
+  };
+</script>
+
+<style>
+  :root {
+    --cream: #faf6f1;
+    --warm-white: #fff9f4;
+    --dusty-rose: #d4826a;
+    --blush: #e8b4a0;
+    --terracotta: #c4623e;
+    --deep-brown: #3d2314;
+    --mid-brown: #7a4a2e;
+    --sage: #7a8c6e;
+    --gold: #c9a84c;
+    --light-gold: #e8d5a3;
+    --text-muted: #8a6a55;
+    --shadow: rgba(61,35,20,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Lora', Georgia, serif;
+    background-color: var(--cream);
+    color: var(--deep-brown);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 10% 15%, rgba(212,130,106,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 60% at 90% 80%, rgba(122,140,110,0.07) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* === SETUP BANNER === */
+  #setup-banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+    background: #c4623e; color: white;
+    padding: 10px 20px;
+    font-family: 'Lora', serif; font-size: 0.88rem;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    display: none;
+  }
+  #setup-banner a { color: #ffd; text-decoration: underline; cursor: pointer; }
+  #setup-banner button { background: rgba(255,255,255,0.25); border: none; color: white; padding: 4px 12px; border-radius: 2px; cursor: pointer; font-family: 'Lora', serif; font-size: 0.82rem; }
+
+  /* === LOADING === */
+  #loading-screen {
+    position: fixed; inset: 0; background: var(--cream);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 500; gap: 16px;
+    font-family: 'Playfair Display', serif; color: var(--mid-brown);
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid rgba(212,130,106,0.3);
+    border-top-color: var(--dusty-rose);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* === HEADER === */
+  header {
+    position: relative; z-index: 10;
+    text-align: center; padding: 60px 20px 40px;
+    border-bottom: 1px solid rgba(201,168,76,0.3);
+  }
+  .header-ornament { font-size: 1rem; color: var(--gold); letter-spacing: 0.4em; margin-bottom: 16px; opacity: 0.8; }
+  header h1 { font-family: 'Playfair Display', serif; font-size: clamp(2rem, 6vw, 3.5rem); color: var(--deep-brown); margin-bottom: 8px; }
+  header h1 em { font-style: italic; color: var(--dusty-rose); }
+  .header-subtitle { font-style: italic; color: var(--text-muted); font-size: 0.95rem; margin-bottom: 28px; }
+  .header-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  /* === BUTTONS === */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 10px 20px; border-radius: 2px;
+    font-family: 'Lora', serif; font-size: 0.88rem;
+    cursor: pointer; transition: all 0.22s; border: none; letter-spacing: 0.03em;
+  }
+  .btn-primary { background: var(--dusty-rose); color: white; }
+  .btn-primary:hover { background: var(--terracotta); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(196,98,62,0.3); }
+  .btn-secondary { background: transparent; color: var(--mid-brown); border: 1px solid rgba(122,74,46,0.35); }
+  .btn-secondary:hover { background: rgba(122,74,46,0.07); }
+  .btn-share { background: var(--sage); color: white; }
+  .btn-share:hover { background: #697a5e; transform: translateY(-1px); }
+
+  /* === NAV === */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(250,246,241,0.95); backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(201,168,76,0.2);
+    display: flex; justify-content: center; padding: 0 20px; overflow-x: auto;
+  }
+  .nav-tab {
+    padding: 14px 22px; font-family: 'Lora', serif; font-size: 0.88rem;
+    color: var(--text-muted); cursor: pointer; border: none; background: none;
+    border-bottom: 2px solid transparent; transition: all 0.2s;
+    letter-spacing: 0.04em; white-space: nowrap;
+  }
+  .nav-tab:hover { color: var(--dusty-rose); }
+  .nav-tab.active { color: var(--dusty-rose); border-bottom-color: var(--dusty-rose); }
+
+  /* === LIVE INDICATOR === */
+  .live-dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: #5cb85c; border-radius: 50%;
+    margin-right: 5px; animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* === MAIN === */
+  main { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 40px 20px 80px; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--deep-brown); margin-bottom: 6px; }
+  .section-line { width: 48px; height: 2px; background: var(--gold); margin-bottom: 28px; }
+
+  /* === GRID === */
+  .memories-grid { columns: 3; column-gap: 16px; }
+  @media (max-width: 768px) { .memories-grid { columns: 2; } }
+  @media (max-width: 480px) { .memories-grid { columns: 1; } }
+
+  /* === CARD === */
+  .memory-card {
+    break-inside: avoid; margin-bottom: 16px;
+    background: var(--warm-white);
+    border: 1px solid rgba(201,168,76,0.2); border-radius: 3px;
+    overflow: hidden; box-shadow: 0 2px 12px var(--shadow);
+    transition: transform 0.3s, box-shadow 0.3s; cursor: pointer;
+    animation: fadeUp 0.4s ease both;
+  }
+  .memory-card:hover { transform: translateY(-4px); box-shadow: 0 8px 28px var(--shadow); }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; } }
+
+  .memory-img-wrap { position: relative; overflow: hidden; }
+  .memory-img-wrap img { width: 100%; display: block; transition: transform 0.5s; }
+  .memory-card:hover .memory-img-wrap img { transform: scale(1.04); }
+  .memory-placeholder {
+    width: 100%; min-height: 140px;
+    display: flex; align-items: center; justify-content: center; font-size: 2.8rem;
+    background: linear-gradient(135deg, var(--light-gold) 0%, var(--blush) 100%);
+  }
+  .memory-tag {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(61,35,20,0.72); color: var(--light-gold);
+    font-size: 0.7rem; padding: 3px 9px; border-radius: 20px;
+    letter-spacing: 0.06em; font-style: italic;
+  }
+  .memory-body { padding: 13px 15px 15px; }
+  .memory-title { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700; color: var(--deep-brown); margin-bottom: 4px; }
+  .memory-date { font-size: 0.74rem; color: var(--gold); letter-spacing: 0.06em; margin-bottom: 7px; font-style: italic; }
+  .memory-text { font-size: 0.84rem; color: var(--text-muted); line-height: 1.6; }
+  .memory-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 11px; padding-top: 9px; border-top: 1px solid rgba(201,168,76,0.15);
+  }
+  .memory-likes { font-size: 0.8rem; color: var(--dusty-rose); cursor: pointer; user-select: none; transition: transform 0.2s; }
+  .memory-likes:hover { transform: scale(1.2); }
+  .memory-author { font-size: 0.74rem; color: var(--text-muted); font-style: italic; }
+
+  /* === EMPTY STATE === */
+  .empty-state { text-align: center; padding: 80px 20px; color: var(--text-muted); }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 14px; }
+  .empty-state h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; margin-bottom: 6px; color: var(--mid-brown); }
+  .empty-state p { font-size: 0.88rem; font-style: italic; }
+
+  /* === MODAL === */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(30,15,5,0.75); z-index: 500;
+    justify-content: center; align-items: flex-start;
+    padding: 30px 20px; overflow-y: auto; backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--warm-white); border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 4px; width: 100%; max-width: 560px; padding: 32px;
+    position: relative; animation: modalIn 0.3s ease;
+    box-shadow: 0 20px 60px rgba(30,15,5,0.4);
+  }
+  @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(14px); } to { opacity: 1; transform: none; } }
+  .modal-close {
+    position: absolute; top: 14px; right: 16px;
+    background: none; border: none; font-size: 1.3rem;
+    cursor: pointer; color: var(--text-muted); transition: color 0.2s;
+  }
+  .modal-close:hover { color: var(--dusty-rose); }
+  .modal h2 { font-family: 'Playfair Display', serif; font-size: 1.45rem; color: var(--deep-brown); margin-bottom: 5px; }
+  .modal-subtitle { font-size: 0.84rem; color: var(--text-muted); font-style: italic; margin-bottom: 22px; }
+
+  /* === FORM === */
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 0.78rem; letter-spacing: 0.05em; color: var(--mid-brown); margin-bottom: 5px; }
+  .form-group input, .form-group textarea, .form-group select {
+    width: 100%; padding: 10px 13px;
+    border: 1px solid rgba(122,74,46,0.25); border-radius: 2px;
+    font-family: 'Lora', serif; font-size: 0.9rem;
+    color: var(--deep-brown); background: var(--cream);
+    transition: border-color 0.2s; outline: none;
+  }
+  .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+    border-color: var(--dusty-rose); box-shadow: 0 0 0 3px rgba(212,130,106,0.1);
+  }
+  .form-group textarea { min-height: 85px; resize: vertical; }
+
+  /* === UPLOAD === */
+  .upload-area {
+    border: 2px dashed rgba(201,168,76,0.4); border-radius: 3px;
+    padding: 26px; text-align: center; cursor: pointer;
+    transition: all 0.2s; background: rgba(201,168,76,0.04);
+  }
+  .upload-area:hover { border-color: var(--dusty-rose); background: rgba(212,130,106,0.05); }
+  .upload-area p { font-size: 0.82rem; color: var(--text-muted); font-style: italic; }
+  .upload-area input { display: none; }
+  .upload-preview { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+  .upload-preview img { width: 64px; height: 64px; object-fit: cover; border-radius: 2px; border: 2px solid var(--blush); }
+  .upload-note { font-size: 0.76rem; color: var(--text-muted); margin-top: 6px; font-style: italic; }
+
+  /* === VIEW MODAL === */
+  .view-modal-img img { width: 100%; border-radius: 3px; margin-bottom: 14px; max-height: 380px; object-fit: cover; cursor: zoom-in; }
+  .view-modal-placeholder { width: 100%; height: 180px; display: flex; align-items: center; justify-content: center; font-size: 4rem; background: linear-gradient(135deg, var(--light-gold), var(--blush)); border-radius: 3px; margin-bottom: 14px; }
+
+  /* === SHARE MODAL === */
+  .share-link-box { display: flex; gap: 8px; margin: 12px 0 4px; }
+  .share-link-box input {
+    flex: 1; padding: 9px 12px;
+    border: 1px solid rgba(122,74,46,0.25); border-radius: 2px;
+    font-family: 'Lora', serif; font-size: 0.82rem;
+    color: var(--text-muted); background: var(--cream); outline: none;
+  }
+  .btn-copy { padding: 9px 15px; background: var(--gold); color: var(--deep-brown); border: none; border-radius: 2px; cursor: pointer; font-size: 0.82rem; font-family: 'Lora', serif; transition: background 0.2s; }
+  .btn-copy:hover { background: var(--dusty-rose); color: white; }
+
+  /* === TOAST === */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%) translateY(70px);
+    background: var(--deep-brown); color: var(--light-gold);
+    padding: 11px 22px; border-radius: 2px;
+    font-family: 'Lora', serif; font-size: 0.86rem; font-style: italic;
+    z-index: 1000; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    pointer-events: none; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* === LIGHTBOX === */
+  .lightbox { display: none; position: fixed; inset: 0; background: rgba(8,3,0,0.93); z-index: 800; align-items: center; justify-content: center; padding: 20px; }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 2px; object-fit: contain; box-shadow: 0 8px 60px rgba(0,0,0,0.6); }
+  .lightbox-close { position: absolute; top: 18px; right: 22px; color: rgba(255,255,255,0.7); font-size: 1.7rem; cursor: pointer; background: none; border: none; transition: color 0.2s; }
+  .lightbox-close:hover { color: white; }
+
+  /* === SAVING INDICATOR === */
+  .saving-badge {
+    position: fixed; top: 12px; right: 16px; z-index: 300;
+    background: var(--sage); color: white;
+    padding: 5px 12px; border-radius: 20px;
+    font-size: 0.76rem; font-family: 'Lora', serif;
+    opacity: 0; transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .saving-badge.show { opacity: 1; }
+
+  @media (max-width: 600px) { .modal { padding: 22px 18px; } }
+</style>
+</head>
+<body>
+
+<!-- Setup warning banner -->
+<div id="setup-banner">
+  ⚠️ Chưa cấu hình Firebase — dữ liệu chưa được lưu. <a onclick="document.getElementById('setup-modal').classList.add('open')">Xem hướng dẫn cài đặt</a>
+  <button onclick="document.getElementById('setup-banner').style.display='none'">✕</button>
+</div>
+
+<!-- Loading screen -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <span style="font-size:1rem; font-style:italic;">Đang kết nối...</span>
+</div>
+
+<!-- Saving badge -->
+<div class="saving-badge" id="saving-badge">💾 Đang lưu...</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-ornament">✦ &nbsp; N H Ậ T &nbsp; K Ý &nbsp; G I A &nbsp; Đ Ì N H &nbsp; ✦</div>
+  <h1>Kỷ Niệm <em>Yêu Thương</em></h1>
+  <p class="header-subtitle">
+    <span class="live-dot"></span>Đồng bộ thực giữa tất cả thiết bị
+  </p>
+  <div class="header-actions">
+    <button class="btn btn-primary" onclick="openModal('add-modal')">✦ Thêm kỷ niệm</button>
+    <button class="btn btn-share" onclick="openShareModal()">⇗ Chia sẻ gia đình</button>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav>
+  <button class="nav-tab active" onclick="switchView('all', this)">Tất cả</button>
+  <button class="nav-tab" onclick="switchView('photos', this)">Có ảnh</button>
+  <button class="nav-tab" onclick="switchView('moments', this)">Khoảnh khắc</button>
+</nav>
+
+<!-- MAIN -->
+<main>
+  <div id="view-all" class="view active">
+    <div style="margin-bottom:24px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:10px;">
+      <div>
+        <h2 class="section-title" id="view-title">Tất cả kỷ niệm</h2>
+        <div class="section-line"></div>
+      </div>
+      <div style="font-size:0.8rem; color:var(--text-muted); font-style:italic;" id="memory-count">Đang tải...</div>
+    </div>
+    <div class="memories-grid" id="memories-container"></div>
+    <div class="empty-state" id="empty-state" style="display:none">
+      <div class="icon">🌸</div>
+      <h3>Chưa có kỷ niệm nào</h3>
+      <p>Nhấn "Thêm kỷ niệm" để bắt đầu lưu giữ những khoảnh khắc đẹp</p>
+    </div>
+  </div>
+</main>
+
+<!-- ===== ADD MODAL ===== -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('add-modal')">✕</button>
+    <h2>Thêm kỷ niệm mới</h2>
+    <p class="modal-subtitle">Lưu giữ khoảnh khắc của gia đình — đồng bộ ngay lập tức</p>
+
+    <div class="form-group">
+      <label>TIÊU ĐỀ *</label>
+      <input type="text" id="mem-title" placeholder="Vd: Tết Nguyên Đán 2025..." />
+    </div>
+    <div class="form-group">
+      <label>NGÀY THÁNG</label>
+      <input type="date" id="mem-date" />
+    </div>
+    <div class="form-group">
+      <label>LOẠI KỶ NIỆM</label>
+      <select id="mem-tag">
+        <option>Gia đình</option>
+        <option>Du lịch</option>
+        <option>Sinh nhật</option>
+        <option>Lễ tết</option>
+        <option>Hàng ngày</option>
+        <option>Khác</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>GHI CHÚ / KỂ CHUYỆN</label>
+      <textarea id="mem-desc" placeholder="Chia sẻ cảm xúc về khoảnh khắc này..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>ẢNH (tuỳ chọn)</label>
+      <div class="upload-area" onclick="document.getElementById('mem-imgs').click()">
+        <input type="file" id="mem-imgs" multiple accept="image/*" onchange="previewImages(this)">
+        <div style="font-size:1.8rem; margin-bottom:6px;">🖼️</div>
+        <p>Nhấn để chọn ảnh từ thiết bị của bạn</p>
+      </div>
+      <div class="upload-preview" id="img-preview"></div>
+      <div class="upload-note">Ảnh được lưu dưới dạng base64 — giới hạn ~1–2 ảnh mỗi lần để tránh lỗi dung lượng Firestore</div>
+    </div>
+    <div class="form-group">
+      <label>NGƯỜI ĐĂNG</label>
+      <input type="text" id="mem-author" placeholder="Tên của bạn..." />
+    </div>
+
+    <button class="btn btn-primary" style="width:100%; justify-content:center; padding:13px;" onclick="saveMemory()">
+      ✦ Lưu kỷ niệm
+    </button>
+  </div>
+</div>
+
+<!-- ===== VIEW MODAL ===== -->
+<div class="modal-overlay" id="view-modal">
+  <div class="modal" style="max-width:620px;">
+    <button class="modal-close" onclick="closeModal('view-modal')">✕</button>
+    <div id="view-modal-img"></div>
+    <div id="view-modal-tag" style="margin-bottom:8px;"></div>
+    <h2 id="view-modal-title" style="font-size:1.5rem; margin-bottom:5px;"></h2>
+    <div id="view-modal-date" style="font-size:0.78rem; color:var(--gold); font-style:italic; letter-spacing:0.06em; margin-bottom:13px;"></div>
+    <p id="view-modal-desc" style="font-size:0.9rem; color:var(--text-muted); line-height:1.75;"></p>
+    <div id="view-modal-author" style="margin-top:14px; font-size:0.78rem; color:var(--text-muted); font-style:italic; border-top:1px solid rgba(201,168,76,0.2); padding-top:11px;"></div>
+    <div style="margin-top:16px; display:flex; gap:10px;">
+      <button class="btn btn-secondary" onclick="likeFromView()">❤️ Thích</button>
+      <button class="btn btn-secondary" onclick="deleteFromView()" style="margin-left:auto; color:var(--dusty-rose);">✕ Xoá</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SHARE MODAL ===== -->
+<div class="modal-overlay" id="share-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('share-modal')">✕</button>
+    <h2>Chia sẻ với gia đình</h2>
+    <p class="modal-subtitle">Gửi link — ai mở link đều xem và thêm ảnh được ngay</p>
+    <label style="font-size:0.78rem; letter-spacing:0.05em; color:var(--mid-brown);">ĐƯỜNG LINK WEBSITE</label>
+    <div class="share-link-box">
+      <input type="text" id="share-link-input" readonly />
+      <button class="btn-copy" onclick="copyLink()">Sao chép</button>
+    </div>
+    <p style="font-size:0.76rem; color:var(--text-muted); font-style:italic; margin-bottom:22px;">✦ Tất cả mọi người dùng chung một kho dữ liệu, đồng bộ theo thời gian thực</p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn btn-secondary" onclick="shareVia('zalo')">💬 Zalo</button>
+      <button class="btn btn-secondary" onclick="shareVia('facebook')">📘 Facebook</button>
+      <button class="btn btn-secondary" onclick="shareVia('email')">✉ Email</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SETUP GUIDE MODAL ===== -->
+<div class="modal-overlay" id="setup-modal">
+  <div class="modal" style="max-width:640px;">
+    <button class="modal-close" onclick="closeModal('setup-modal')">✕</button>
+    <h2>Cài đặt Firebase</h2>
+    <p class="modal-subtitle">Thực hiện một lần duy nhất — miễn phí vĩnh viễn</p>
+    <ol style="font-size:0.88rem; line-height:2; color:var(--deep-brown); padding-left:18px;">
+      <li>Vào <strong>console.firebase.google.com</strong> → đăng nhập Google</li>
+      <li>Nhấn <strong>Add project</strong> → đặt tên → tắt Analytics → Create project</li>
+      <li>Trong project: nhấn biểu tượng <strong>&lt;/&gt;</strong> (Web) → đặt tên app → Register app</li>
+      <li>Copy đoạn <strong>firebaseConfig</strong> hiện ra</li>
+      <li>Mở file <code>family-blog-firebase.html</code> bằng Notepad → tìm <strong>FIREBASE_CONFIG</strong> → thay các giá trị</li>
+      <li>Quay lại Firebase Console → <strong>Firestore Database</strong> → Create database → <strong>Start in test mode</strong> → Next → Enable</li>
+      <li>Upload lại file HTML lên GitHub → website hoạt động đầy đủ!</li>
+    </ol>
+    <div style="margin-top:16px; padding:14px; background:rgba(201,168,76,0.1); border-left:3px solid var(--gold); border-radius:2px; font-size:0.82rem; color:var(--text-muted); font-style:italic;">
+      💡 Gói miễn phí Firebase Spark: 1GB lưu trữ, 50.000 lượt đọc/ngày, 20.000 lượt ghi/ngày — đủ dùng cho cả gia đình nhiều năm.
+    </div>
+    <button class="btn btn-primary" style="margin-top:18px; width:100%; justify-content:center;" onclick="window.open('https://console.firebase.google.com','_blank')">Mở Firebase Console →</button>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close">✕</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {
+  getFirestore, collection, addDoc, getDocs, doc,
+  updateDoc, deleteDoc, onSnapshot, serverTimestamp, query, orderBy
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+// ============================================================
+const CONFIG_OK = FIREBASE_CONFIG.apiKey !== "AIzaSyCQigcQUk18q2G9mnWGmyAggx3cUNVUWgQ";
+// ============================================================
+
+let db, memoriesCol, unsubscribe;
+let memoriesCache = [];
+let currentViewId = null;
+let currentFilter = 'all';
+let imageDataList = [];
+
+async function initFirebase() {
+  try {
+    if (!CONFIG_OK) {
+      document.getElementById('setup-banner').style.display = 'flex';
+      document.getElementById('loading-screen').style.display = 'none';
+      useFallback();
+      return;
+    }
+    const app = initializeApp(FIREBASE_CONFIG);
+    db = getFirestore(app);
+    memoriesCol = collection(db, 'memories');
+
+    // Real-time listener
+    const q = query(memoriesCol, orderBy('createdAt', 'desc'));
+    unsubscribe = onSnapshot(q, (snap) => {
+      memoriesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderMemories(applyFilter(memoriesCache));
+      document.getElementById('loading-screen').style.display = 'none';
+    }, (err) => {
+      console.error(err);
+      showToast('Lỗi kết nối Firebase — kiểm tra cấu hình');
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('setup-banner').style.display = 'flex';
+    });
+
+  } catch(e) {
+    console.error(e);
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('setup-banner').style.display = 'flex';
+    useFallback();
+  }
+}
+
+// Fallback to localStorage when Firebase not configured
+function useFallback() {
+  memoriesCache = JSON.parse(localStorage.getItem('family_memories') || '[]');
+  renderMemories(applyFilter(memoriesCache));
+}
+
+function applyFilter(list) {
+  if (currentFilter === 'photos') return list.filter(m => m.images && m.images.length);
+  if (currentFilter === 'moments') return list.filter(m => !m.images || !m.images.length);
+  return list;
+}
+
+// ===== SWITCH VIEW =====
+window.switchView = function(name, tab) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  currentFilter = name;
+  const titles = { all: 'Tất cả kỷ niệm', photos: 'Kỷ niệm có ảnh', moments: 'Khoảnh khắc' };
+  document.getElementById('view-title').textContent = titles[name];
+  renderMemories(applyFilter(memoriesCache));
+};
+
+// ===== RENDER =====
+function renderMemories(list) {
+  const container = document.getElementById('memories-container');
+  const empty = document.getElementById('empty-state');
+  const count = document.getElementById('memory-count');
+  container.innerHTML = '';
+  count.textContent = `${list.length} kỷ niệm`;
+
+  if (!list.length) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  list.forEach((m, i) => {
+    const card = document.createElement('div');
+    card.className = 'memory-card';
+    card.style.animationDelay = `${Math.min(i, 8) * 0.055}s`;
+    card.onclick = () => openViewModal(m.id);
+
+    const imgHtml = (m.images && m.images.length)
+      ? `<div class="memory-img-wrap"><img src="${m.images[0]}" alt="" loading="lazy"><span class="memory-tag">${esc(m.tag)}</span></div>`
+      : `<div class="memory-img-wrap"><div class="memory-placeholder">${tagEmoji(m.tag)}</div><span class="memory-tag">${esc(m.tag)}</span></div>`;
+
+    const dateStr = m.date ? new Date(m.date + 'T00:00:00').toLocaleDateString('vi-VN', { day:'2-digit', month:'long', year:'numeric' }) : '';
+
+    card.innerHTML = `${imgHtml}
+      <div class="memory-body">
+        <div class="memory-title">${esc(m.title)}</div>
+        ${dateStr ? `<div class="memory-date">✦ ${dateStr}</div>` : ''}
+        ${m.desc ? `<div class="memory-text">${esc(m.desc).substring(0,90)}${m.desc.length>90?'…':''}</div>` : ''}
+        <div class="memory-footer">
+          <span class="memory-likes" onclick="event.stopPropagation(); toggleLike('${m.id}')">
+            ${m.liked ? '❤️' : '🤍'} ${m.likes || 0}
+          </span>
+          ${m.author ? `<span class="memory-author">— ${esc(m.author)}</span>` : ''}
+        </div>
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+// ===== SAVE MEMORY =====
+window.saveMemory = async function() {
+  const title = document.getElementById('mem-title').value.trim();
+  if (!title) { showToast('Vui lòng nhập tiêu đề!'); return; }
+
+  showSaving();
+  const memory = {
+    title,
+    date: document.getElementById('mem-date').value,
+    tag: document.getElementById('mem-tag').value,
+    desc: document.getElementById('mem-desc').value.trim(),
+    author: document.getElementById('mem-author').value.trim(),
+    images: imageDataList.slice(),
+    likes: 0, liked: false,
+    createdAt: CONFIG_OK ? serverTimestamp() : new Date().toISOString()
+  };
+
+  try {
+    if (CONFIG_OK && db) {
+      await addDoc(memoriesCol, memory);
+    } else {
+      memory.id = Date.now().toString();
+      memory.createdAt = new Date().toISOString();
+      memoriesCache.unshift(memory);
+      localStorage.setItem('family_memories', JSON.stringify(memoriesCache));
+      renderMemories(applyFilter(memoriesCache));
+    }
+    closeModal('add-modal');
+    resetForm();
+    showToast('✦ Kỷ niệm đã được lưu!');
+  } catch(e) {
+    console.error(e);
+    showToast('Lỗi khi lưu — kiểm tra kết nối');
+  }
+};
+
+// ===== LIKE =====
+window.toggleLike = async function(id) {
+  const m = memoriesCache.find(x => x.id === id);
+  if (!m) return;
+  const newLiked = !m.liked;
+  const newLikes = (m.likes || 0) + (newLiked ? 1 : -1);
+  try {
+    if (CONFIG_OK && db) {
+      await updateDoc(doc(db, 'memories', id), { liked: newLiked, likes: newLikes });
+    } else {
+      m.liked = newLiked; m.likes = newLikes;
+      localStorage.setItem('family_memories', JSON.stringify(memoriesCache));
+      renderMemories(applyFilter(memoriesCache));
+    }
+  } catch(e) { console.error(e); }
+};
+
+// ===== VIEW MODAL =====
+window.openViewModal = function(id) {
+  currentViewId = id;
+  const m = memoriesCache.find(x => x.id === id);
+  if (!m) return;
+
+  const imgEl = document.getElementById('view-modal-img');
+  if (m.images && m.images.length) {
+    imgEl.innerHTML = `<img src="${m.images[0]}" onclick="openLightbox('${m.images[0]}')" />`;
+  } else {
+    imgEl.innerHTML = `<div class="view-modal-placeholder">${tagEmoji(m.tag)}</div>`;
+  }
+  document.getElementById('view-modal-tag').innerHTML = `<span class="memory-tag" style="position:static;display:inline-block;background:var(--mid-brown);">${esc(m.tag)}</span>`;
+  document.getElementById('view-modal-title').textContent = m.title;
+  const dateStr = m.date ? new Date(m.date+'T00:00:00').toLocaleDateString('vi-VN',{day:'2-digit',month:'long',year:'numeric'}) : '';
+  document.getElementById('view-modal-date').textContent = dateStr ? `✦ ${dateStr}` : '';
+  document.getElementById('view-modal-desc').textContent = m.desc || '';
+  document.getElementById('view-modal-author').textContent = m.author ? `Đăng bởi: ${m.author}` : '';
+  openModal('view-modal');
+};
+
+window.likeFromView = function() { if (currentViewId) toggleLike(currentViewId); closeModal('view-modal'); showToast('❤️ Đã thích!'); };
+
+window.deleteFromView = async function() {
+  if (!currentViewId || !confirm('Xoá kỷ niệm này?')) return;
+  try {
+    if (CONFIG_OK && db) {
+      await deleteDoc(doc(db, 'memories', currentViewId));
+    } else {
+      memoriesCache = memoriesCache.filter(x => x.id !== currentViewId);
+      localStorage.setItem('family_memories', JSON.stringify(memoriesCache));
+      renderMemories(applyFilter(memoriesCache));
+    }
+    closeModal('view-modal');
+    showToast('Đã xoá kỷ niệm');
+  } catch(e) { showToast('Lỗi khi xoá'); }
+};
+
+// ===== IMAGE PREVIEW =====
+window.previewImages = function(input) {
+  imageDataList = [];
+  document.getElementById('img-preview').innerHTML = '';
+  const files = Array.from(input.files).slice(0, 2); // max 2 imgs
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      imageDataList.push(e.target.result);
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.onclick = () => openLightbox(e.target.result);
+      document.getElementById('img-preview').appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
+// ===== SHARE =====
+window.openShareModal = function() {
+  document.getElementById('share-link-input').value = window.location.href.split('?')[0];
+  openModal('share-modal');
+};
+window.copyLink = function() {
+  const input = document.getElementById('share-link-input');
+  input.select(); document.execCommand('copy');
+  showToast('✦ Đã sao chép link!');
+};
+window.shareVia = function(p) {
+  const url = encodeURIComponent(document.getElementById('share-link-input').value);
+  const text = encodeURIComponent('Nhật ký gia đình 🌸');
+  const links = { facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`, email: `mailto:?subject=${text}&body=${url}`, zalo: `https://zalo.me/share?url=${url}&text=${text}` };
+  if (links[p]) window.open(links[p], '_blank');
+};
+
+// ===== HELPERS =====
+function tagEmoji(tag) {
+  return { 'Gia đình':'👨‍👩‍👧‍👦','Du lịch':'✈️','Sinh nhật':'🎂','Lễ tết':'🎋','Hàng ngày':'☀️','Khác':'💛' }[tag] || '🌸';
+}
+function resetForm() {
+  ['mem-title','mem-desc','mem-author'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('img-preview').innerHTML = '';
+  document.getElementById('mem-date').value = new Date().toISOString().slice(0,10);
+  imageDataList = [];
+}
+function showSaving() {
+  const b = document.getElementById('saving-badge'); b.classList.add('show');
+  setTimeout(() => b.classList.remove('show'), 2000);
+}
+window.openModal = function(id) { document.getElementById(id).classList.add('open'); };
+window.closeModal = function(id) { document.getElementById(id).classList.remove('open'); };
+window.openLightbox = function(src) { document.getElementById('lightbox-img').src = src; document.getElementById('lightbox').classList.add('open'); };
+window.closeLightbox = function() { document.getElementById('lightbox').classList.remove('open'); };
+
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg;
+  t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2800);
+}
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target===o) o.classList.remove('open'); }));
+document.getElementById('mem-date').value = new Date().toISOString().slice(0,10);
+
+// Start
+initFirebase();
+</script>
+</body>
+</html>
