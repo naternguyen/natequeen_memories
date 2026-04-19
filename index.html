@@ -388,8 +388,24 @@
         <div style="font-size:1.8rem; margin-bottom:6px;">🖼️</div>
         <p>Nhấn để chọn ảnh từ thiết bị của bạn</p>
       </div>
+      <div id="upload-warning" style="display:none; background:#fff3cd; border-left:4px solid #ffc107; padding:10px 12px; margin-top:10px; border-radius:2px; font-size:0.82rem; color:#856404;">
+        <strong>⚠️ Ảnh quá lớn!</strong> <span id="warning-text"></span>
+      </div>
       <div class="upload-preview" id="img-preview"></div>
       <div class="upload-note">Ảnh được lưu dưới dạng base64 — giới hạn ~1–2 ảnh mỗi lần để tránh lỗi dung lượng Firestore</div>
+      <details style="margin-top:12px; padding:10px; background:rgba(201,168,76,0.08); border-radius:2px; cursor:pointer;">
+        <summary style="font-size:0.82rem; color:var(--text-muted); font-weight:bold; user-select:none;">💡 Hướng dẫn nén ảnh (nếu > 1MB)</summary>
+        <div style="margin-top:10px; font-size:0.78rem; color:var(--text-muted); line-height:1.7;">
+          <p><strong>📱 Cách nhanh nhất:</strong></p>
+          <ul style="margin-left:16px; margin-top:4px;">
+            <li><strong>Online:</strong> Vào tinypng.com hoặc compressor.io → upload → download ảnh nén</li>
+            <li><strong>Windows:</strong> Nhấn chuột phải ảnh → Chỉnh sửa → Nén ảnh (Windows 10+)</li>
+            <li><strong>Mac:</strong> Preview → Tools → Adjust Size → thay đổi kích thước</li>
+            <li><strong>Phone:</strong> Dùng app như ImageCompressor hoặc Photos built-in</li>
+          </ul>
+          <p style="margin-top:8px;"><strong>💾 Lưu ý kích thước:</strong> Mỗi ảnh nên ~200-400KB để không bị chậm</p>
+        </div>
+      </details>
     </div>
     <div class="form-group">
       <label>NGƯỜI ĐĂNG</label>
@@ -677,8 +693,22 @@ window.deleteFromView = async function() {
 window.previewImages = function(input) {
   imageDataList = [];
   document.getElementById('img-preview').innerHTML = '';
+  document.getElementById('upload-warning').style.display = 'none';
+  
+  const MAX_SIZE = 1024 * 1024; // 1MB in bytes
   const files = Array.from(input.files).slice(0, 2); // max 2 imgs
+  let hasLargeFiles = false;
+  let oversizedInfo = [];
+  
   files.forEach(file => {
+    // Check file size
+    if (file.size > MAX_SIZE) {
+      hasLargeFiles = true;
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      oversizedInfo.push(`"${file.name}" (${sizeMB}MB)`);
+      return; // Skip this file
+    }
+    
     const reader = new FileReader();
     reader.onload = e => {
       imageDataList.push(e.target.result);
@@ -689,6 +719,13 @@ window.previewImages = function(input) {
     };
     reader.readAsDataURL(file);
   });
+  
+  // Show warning if there are oversized files
+  if (hasLargeFiles) {
+    const warningEl = document.getElementById('upload-warning');
+    document.getElementById('warning-text').textContent = `${oversizedInfo.join(', ')} vượt quá 1MB. Vui lòng nén ảnh trước khi upload.`;
+    warningEl.style.display = 'block';
+  }
 };
 
 // ===== SHARE =====
